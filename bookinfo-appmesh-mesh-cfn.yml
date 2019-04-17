@@ -1,0 +1,326 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "App Mesh for Bookinfo example"
+
+Parameters:
+  MeshName:
+    Description: Name of the AppMesh
+    Type: String
+    Default: bookinfo-mesh
+
+Resources:
+  Mesh:
+    Type: AWS::AppMesh::Mesh
+    Properties:
+      MeshName: !Ref MeshName
+
+  # Details microservice
+  DetailsRouter:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualRouter
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualRouterName: details-router-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+
+  DetailsService:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !Ref MeshName
+      Spec:
+        Provider:
+          VirtualRouter:
+            VirtualRouterName: !GetAtt DetailsRouter.VirtualRouterName
+      VirtualServiceName: details
+
+  DetailsNodeV1:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: details-v1-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /details/1
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+
+        ServiceDiscovery:
+          DNS:
+            Hostname: details.appmesh-bookinfo.svc.cluster.local
+
+
+  DetailsRoute:
+    Type: AWS::AppMesh::Route
+    Properties:
+      MeshName: !Ref MeshName
+      RouteName: details-route
+      VirtualRouterName: !GetAtt DetailsRouter.VirtualRouterName
+      Spec:
+        HttpRoute:
+          Match:
+            Prefix: "/"
+          Action:
+            WeightedTargets:
+              - VirtualNode: !GetAtt DetailsNodeV1.VirtualNodeName
+                Weight: 1
+
+  # Ratings microservice
+  RatingsRouter:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualRouter
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualRouterName: ratings-router-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+
+  RatingsService:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !Ref MeshName
+      Spec:
+        Provider:
+          VirtualRouter:
+            VirtualRouterName: !GetAtt RatingsRouter.VirtualRouterName
+      VirtualServiceName: ratings
+
+  RatingsNodeV1:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: ratings-v1-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /ratings/1
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+        ServiceDiscovery:
+          DNS:
+            Hostname: ratings.appmesh-bookinfo.svc.cluster.local
+
+  RatingsRouteV1:
+    Type: AWS::AppMesh::Route
+    Properties:
+      MeshName: !Ref MeshName
+      RouteName: ratings-v1-route
+      VirtualRouterName: !GetAtt RatingsRouter.VirtualRouterName
+      Spec:
+        HttpRoute:
+          Match:
+            Prefix: "/"
+          Action:
+            WeightedTargets:
+              - VirtualNode: !GetAtt RatingsNodeV1.VirtualNodeName
+                Weight: 1
+
+  # Reviews microservice
+  ReviewsRouter:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualRouter
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualRouterName: reviews-router-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+
+  ReviewsService:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !Ref MeshName
+      Spec:
+        Provider:
+          VirtualRouter:
+            VirtualRouterName: !GetAtt ReviewsRouter.VirtualRouterName
+      VirtualServiceName: reviews
+
+  ReviewsNodeV1:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: reviews-v1-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /reviews/1
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+        ServiceDiscovery:
+          DNS:
+            Hostname: reviews-v1.appmesh-bookinfo.svc.cluster.local
+
+  ReviewsNodeV2:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: reviews-v2-appmesh-bookinfo
+      Spec:
+        Backends:
+          - VirtualService:
+              VirtualServiceName: !GetAtt RatingsService.VirtualServiceName
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /details/1
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+        ServiceDiscovery:
+          DNS:
+            Hostname: reviews-v2.appmesh-bookinfo.svc.cluster.local
+
+  ReviewsNodeV3:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: reviews-v3-appmesh-bookinfo
+      Spec:
+        Backends:
+          - VirtualService:
+              VirtualServiceName: !GetAtt RatingsService.VirtualServiceName
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /details/1
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+        ServiceDiscovery:
+          DNS:
+            Hostname: reviews-v3.appmesh-bookinfo.svc.cluster.local
+
+  ReviewsRouteV1:
+    Type: AWS::AppMesh::Route
+    Properties:
+      MeshName: !Ref MeshName
+      RouteName: reviews-route
+      VirtualRouterName: !GetAtt ReviewsRouter.VirtualRouterName
+      Spec:
+        HttpRoute:
+          Match:
+            Prefix: "/"
+          Action:
+            WeightedTargets:
+              - VirtualNode: !GetAtt ReviewsNodeV2.VirtualNodeName
+                Weight: 1
+              - VirtualNode: !GetAtt ReviewsNodeV3.VirtualNodeName
+                Weight: 1
+
+  # ProductPage microservice
+  ProductPageRouter:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualRouter
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualRouterName: productpage-router-appmesh-bookinfo
+      Spec:
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+
+  ProductPageService:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualService
+    Properties:
+      MeshName: !Ref MeshName
+      Spec:
+        Provider:
+          VirtualRouter:
+            VirtualRouterName: !GetAtt ProductPageRouter.VirtualRouterName
+      VirtualServiceName: productpage
+
+  ProductPageNodeV1:
+    DependsOn: Mesh
+    Type: AWS::AppMesh::VirtualNode
+    Properties:
+      MeshName: !Ref MeshName
+      VirtualNodeName: productpage-v1-appmesh-bookinfo
+      Spec:
+        Backends:
+          - VirtualService:
+              VirtualServiceName: !GetAtt DetailsService.VirtualServiceName
+          - VirtualService:
+              VirtualServiceName: !GetAtt ReviewsService.VirtualServiceName
+          - VirtualService:
+              VirtualServiceName: !GetAtt RatingsService.VirtualServiceName
+        Listeners:
+          - PortMapping:
+              Port: 9080
+              Protocol: http
+            HealthCheck:
+              HealthyThreshold: 3
+              IntervalMillis: 5000
+              Path: /
+              Port: 9080
+              Protocol: http
+              TimeoutMillis: 2000
+              UnhealthyThreshold: 3
+        ServiceDiscovery:
+          DNS:
+            Hostname: productpage.appmesh-bookinfo.svc.cluster.local
+
+  ProductPageRouteV1:
+    Type: AWS::AppMesh::Route
+    Properties:
+      MeshName: !Ref MeshName
+      RouteName: product-v1-route
+      VirtualRouterName: !GetAtt ProductPageRouter.VirtualRouterName
+      Spec:
+        HttpRoute:
+          Match:
+            Prefix: "/"
+          Action:
+            WeightedTargets:
+              - VirtualNode: !GetAtt ProductPageNodeV1.VirtualNodeName
+                Weight: 1
+# Outputs:

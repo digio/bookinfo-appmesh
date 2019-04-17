@@ -1,0 +1,18 @@
+apiVersion: eksctl.io/v1alpha4
+kind: ClusterConfig
+
+metadata:
+  name: demo-cluster
+  region: us-east-1
+  version: "1.12"
+
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 5
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        appMesh: true

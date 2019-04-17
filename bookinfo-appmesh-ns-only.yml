@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    appmesh.k8s.aws/sidecarInjectorWebhook: enabled
+  name: appmesh-bookinfo
