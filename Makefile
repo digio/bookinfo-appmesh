@@ -2,7 +2,7 @@
 
 build-cluster:
 	eksctl create cluster --config-file demo-cluster.yml
-	export MESH_REGION=us-east-1; export MESH_NAME=bookinfo-mesh; export IMAGE_NAME=602401143452.dkr.ecr.us-west-2.amazonaws.com/amazon/aws-app-mesh-inject:v0.1.0; curl https://raw.githubusercontent.com/aws/aws-app-mesh-inject/master/hack/install.sh | bash
+	export MESH_REGION=us-east-1; export MESH_NAME=bookinfo-mesh; curl https://raw.githubusercontent.com/aws/aws-app-mesh-inject/master/hack/install.sh | bash
 
 build-cfn:
 	kubectl apply -f bookinfo-appmesh-ns-only.yml
